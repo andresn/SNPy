@@ -15,13 +15,12 @@ module unload miniconda2
 module load miniconda3
 module load muscle
 
-while getopts ts:r:f: flag
+while getopts t:r:f: flag
 do
     case "${flag}" in
         t) run_tests="-t";;
         r) ref_string="${OPTARG}";;
         f) fasta_file="${OPTARG}";;
-        s) start_index="${OPTARG}";;
     esac
 done
-python3 snpy.py $run_tests -r "$ref_string" -f "$fasta_file" -s "$start_index"
+python3 snpy.py $run_tests -r "$ref_string" -f "$fasta_file"

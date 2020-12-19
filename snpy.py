@@ -14,13 +14,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-t', action='store_true', help='Runs unit tests based off of ./test.aln.')
 parser.add_argument('-r', action='store', dest='ref_string', type=str, help='The entire string after ">" in your FASTA file describing your reference sequence.')
 parser.add_argument('-f', action='store', dest='fasta_file', type=str, help='The .fasta file containing the sequences you want aligned and analyzed.')
-parser.add_argument('-s', action='store', dest='start_index', type=str, help='The index of the column where you want to start the analysis from.')
 
 args = parser.parse_args()
 run_tests = args.t
 ref_string = args.ref_string.split(' ')[0]
 fasta_file = args.fasta_file
-start_index = int(args.start_index) if args.start_index != '' else 0
 
 time_stamp = str(time()).split('.')[0][-7:]
 
@@ -40,11 +38,11 @@ total_columns = alignment.get_alignment_length()
 
 column_index = 3
 row_index = 1
-total_rows = len(alignment)
+max_rows = len(alignment)
 
 print('ref_string: ', ref_string)
 
-for i in range(0, total_rows):
+for i in range(0, max_rows):
     print(alignment[i].id)
     if alignment[i].id == ref_string:
         ref_row_index = i
@@ -69,20 +67,28 @@ def timerfunc(func):
         return value
     return function_timer
 
-@timerfunc
-def parse_alignment_column(alignment, indel_hash, snp_hash, total_columns, total_rows, start_index=0):
-    for column_index in range(start_index, total_columns):
-        for row_index in range(0, total_rows):
-            if alignment[row_index, column_index] != alignment[0, column_index]:
-                if alignment[row_index].id not in indel_hash:
-                    if alignment[0, column_index] == "-" or alignment[row_index, column_index] == "-":
-                        indel_hash[alignment[row_index].id] = True
-                    else:
-                        snp_hash[alignment[row_index].id] = True
-    return indel_hash, snp_hash
 
-column_index = 0
-indel_hash, snp_hash = parse_alignment_column(alignment, indel_hash, snp_hash, total_columns, total_rows, start_index)
+code_block = [
+    '@timerfunc',
+    'def parse_alignment_column():',
+    '   for column_index in range(0, total_columns):'
+]
+for row_index in range(0, max_rows):
+    code_block.append(
+        '       if alignment[' + str(row_index) + ', column_index] != alignment[' + str(ref_row_index) + ', column_index]:' + '\n'
+        '           if alignment[' + str(row_index) + '].id not in indel_hash:' + '\n'
+        '               if alignment[' + str(ref_row_index) + ', column_index] == "-" or alignment[' + str(row_index) + ', column_index] == "-":' + '\n'
+        '                   indel_hash[alignment[' + str(row_index) + '].id] = True' + '\n'
+        '               else:' + '\n'
+        '                   snp_hash[alignment[' + str(row_index) + '].id] = True' + '\n'
+    )
+code_block.append(
+    '   return indel_hash, snp_hash' + '\n'
+    'indel_hash, snp_hash = parse_alignment_column()'
+)
+
+code = compile('\n'.join(code_block), '<string>', 'exec')
+exec(code)
 
 indel_array = []
 for hash, value in indel_hash.items() :
